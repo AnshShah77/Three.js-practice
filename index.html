@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Three.js Task</title>
+    <style>
+      body {
+        height: 100vh;
+        margin: 0;
+        padding: 0;
+      }
+
+      #color-select {
+        padding: 10px;
+        font-size: 16px;
+        border: 2px solid #ccc;
+        border-radius: 4px;
+      }
+
+      #color-select option {
+        font-size: 16px;
+      }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  </head>
+  <body>
+    <div id="canvas-wrapper">
+      <select id="color-select">
+        <option value="">Select a color</option>
+        <option value="#FF0000">Red</option>
+        <option value="#00FF00">Green</option>
+        <option value="#0000FF">Blue</option>
+        <option value="#FFFF00">Yellow</option>
+        <option value="#FF00FF">Magenta</option>
+        <option value="#00FFFF">Cyan</option>
+        <option value="#FFA500">Orange</option>
+        <option value="#800080">Purple</option>
+        <option value="#FFC0CB">Pink</option>
+        <!-- Add more color options as needed -->
+      </select>
+    </div>
+
+    <script type="module">
+      const nearDist = 0.1;
+      const farDist = 10000;
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        nearDist,
+        farDist
+      );
+      camera.position.x = farDist * -2;
+      camera.position.z = 500;
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+
+
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.querySelector("#canvas-wrapper").appendChild(renderer.domElement);
+
+      const cubeSize = 120;
+      const geometry = new THREE.BoxBufferGeometry(cubeSize, cubeSize, cubeSize);
+      const material = new THREE.MeshNormalMaterial();
+      const group = new THREE.Group();
+
+      const sphereCount = 230;
+      const sphereSizeMin = 10;
+      const sphereSizeMax = 90;
+
+      for (let i = 0; i < sphereCount; i++) {
+        const mesh = new THREE.Mesh(geometry, material);
+        const dist = farDist / 3;
+        const distDouble = dist * 2;
+        const tau = 2 * Math.PI;
+
+        const sphereSize = Math.random() * (sphereSizeMax - sphereSizeMin) + sphereSizeMin;
+        const geometry1 = new THREE.SphereGeometry(sphereSize, 32, 16);
+        const material1 = new THREE.MeshNormalMaterial();
+        const sphere = new THREE.Mesh(geometry1, material1);
+
+        mesh.position.x = Math.random() * distDouble - dist;
+        mesh.position.y = Math.random() * distDouble - dist;
+        mesh.position.z = Math.random() * distDouble - dist;
+        mesh.rotation.x = Math.random() * tau;
+        mesh.rotation.y = Math.random() * tau;
+        mesh.rotation.z = Math.random() * tau;
+
+        mesh.matrixAutoUpdate = false;
+        mesh.updateMatrix();
+
+        sphere.position.x = Math.random() * distDouble - dist;
+        sphere.position.y = Math.random() * distDouble - dist;
+        sphere.position.z = Math.random() * distDouble - dist;
+        sphere.rotation.x = Math.random() * tau;
+        sphere.rotation.y = Math.random() * tau;
+        sphere.rotation.z = Math.random() * tau;
+
+        sphere.matrixAutoUpdate = false;
+        sphere.updateMatrix();
+
+        group.add(mesh);
+        group.add(sphere);
+      }
+      scene.add(group);
+
+      const loader = new THREE.FontLoader();
+      const textMesh = new THREE.Mesh();
+      const createTypo = (font) => {
+        const word = "Hao Viram";
+        const typoProperties = {
+          font: font,
+          size: cubeSize,
+          height: cubeSize / 2,
+          curveSegments: 12,
+          bevelEnabled: true,
+          bevelThickness: 10,
+          bevelSize: 6,
+          bevelOffset: 1,
+          bevelSegments: 8,
+        };
+        const text = new THREE.TextGeometry(word, typoProperties);
+        textMesh.geometry = text;
+        textMesh.material = material;
+        textMesh.position.x = cubeSize * -2;
+
+        scene.add(textMesh);
+      };
+      loader.load(
+        "https://threejs.org/examples/fonts/helvetiker_regular.typeface.json",
+        createTypo
+      );
+
+      // Add directional light
+      const light = new THREE.DirectionalLight(0xffff00, 1);
+      light.position.set(-100, 200, 100);
+      light.castShadow = true;
+      light.shadow.mapSize.width = 1024;
+      light.shadow.mapSize.height = 1024;
+      light.shadow.camera.near = nearDist;
+      light.shadow.camera.far = farDist;
+      scene.add(light);
+
+      group.traverse((object) => {
+        if (object instanceof THREE.Mesh) {
+          object.castShadow = true;
+        }
+      });
+      textMesh.castShadow = true;
+
+      const planeGeometry = new THREE.PlaneBufferGeometry(2000, 2000);
+      const planeMaterial = new THREE.ShadowMaterial({ opacity: 0.5 });
+      const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+      plane.receiveShadow = true;
+      plane.position.z = -200;
+      scene.add(plane);
+
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      camera.lookAt(scene.position);
+
+      let mouseX = 0;
+
+
+      let mouseY = 0;
+      const mouseFX = {
+        windowHalfX: window.innerWidth / 2,
+        windowHalfY: window.innerHeight / 2,
+        coordinates: function (coordX, coordY) {
+          mouseX = (coordX - mouseFX.windowHalfX) * 10;
+          mouseY = (coordY - mouseFX.windowHalfY) * 10;
+        },
+        onMouseMove: function (e) {
+          mouseFX.coordinates(e.clientX, e.clientY);
+        },
+        onTouchMove: function (e) {
+          mouseFX.coordinates(
+            e.changedTouches[0].clientX,
+            e.changedTouches[0].clientY
+          );
+        },
+      };
+      document.addEventListener("mousemove", mouseFX.onMouseMove, false);
+      document.addEventListener("touchmove", mouseFX.onTouchMove, false);
+
+      // Change background color on color select
+      const colorSelect = document.getElementById("color-select");
+      colorSelect.addEventListener("change", (event) => {
+        const color = event.target.value;
+        renderer.setClearColor(color);
+      });
+
+      const render = () => {
+        requestAnimationFrame(render);
+
+        camera.position.x += (mouseX - camera.position.x) * 0.05;
+        camera.position.y += (mouseY * -1 - camera.position.y) * 0.05;
+        camera.lookAt(scene.position);
+
+        const t = Date.now() * 0.001;
+        const rx = Math.sin(t * 0.7) * 0.5;
+        const ry = Math.sin(t * 0.3) * 0.5;
+        const rz = Math.sin(t * 0.2) * 0.5;
+        group.rotation.x = rx;
+        group.rotation.y = ry;
+        group.rotation.z = rz;
+        textMesh.rotation.x = rx;
+        textMesh.rotation.y = ry;
+        textMesh.rotation.z = rx;
+        renderer.render(scene, camera);
+      };
+      render();
+    </script>
+  </body>
+</html>
